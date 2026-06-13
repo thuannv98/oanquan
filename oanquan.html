@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Ô ăn quan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Itim&family=Be+Vietnam+Pro:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   PALETTE & TOKENS — chất dân gian, sân đất, phấn màu / gạch đỏ
+   ============================================================ */
+:root{
+  --sky-1:#bfe3e8; --sky-2:#e9f3df;
+  --hill:#9cbf7e; --hill-2:#7ea866; --paddy:#cfe0a3;
+  --earth-1:#d8b98c; --earth-2:#c39e6d; --earth-3:#a87f4f;   /* sân đất */
+  --chalk:#fbf4e6; --chalk-y:#f4d35e; --chalk-r:#d96a4a; --chalk-b:#8fb9c9;
+  --brick:#b3492f;                                            /* gạch đỏ */
+  --ink:#4a3526;                                              /* nét mực/than */
+  --ink-soft:#6b513b;
+  --skinflesh:#f0cda0;
+  --p1:#c8682f; --p2:#3f8f7d;
+  --hilite:#ff6a2c;
+  --card:#f3e7d0; --card-edge:#caa874;
+  --shadow:rgba(60,40,20,.35);
+  --drop-ms:300ms;
+  --font:"Itim",system-ui,sans-serif;
+  --font-ui:"Be Vietnam Pro",system-ui,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{font-family:var(--font);color:var(--ink);min-height:100dvh;overflow-x:hidden;
+  background:linear-gradient(180deg,var(--sky-1),var(--sky-2) 38%, #e7dcc0 60%, var(--earth-1) 100%);}
+button{font-family:inherit;cursor:pointer}
+
+/* village backdrop */
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+
+#app{position:relative;z-index:1;max-width:1060px;margin:0 auto;padding:12px 14px 26px;
+  display:flex;flex-direction:column;gap:12px;min-height:100dvh}
+
+/* ---------- topbar ---------- */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{display:flex;align-items:baseline;gap:10px;min-width:0}
+.brand h1{font-family:var(--font);margin:0;font-size:clamp(26px,6vw,40px);line-height:1;white-space:nowrap;
+  color:var(--ink);text-shadow:2px 2px 0 #fff7, -1px -1px 0 #0001}
+.brand .sub{color:var(--ink-soft);font-size:14px;white-space:nowrap}
+.topbtns{display:flex;gap:8px;flex-shrink:0}
+.icon-btn{background:var(--card);border:2px solid var(--card-edge);color:var(--ink);
+  width:44px;height:44px;border-radius:50% 48% 52% 50%/50% 52% 48% 50%;font-size:19px;display:grid;place-items:center;
+  box-shadow:1px 2px 0 var(--shadow);transition:transform .12s}
+.icon-btn:active{transform:translateY(1px) scale(.94)}
+
+/* ---------- player strips (người trên / người dưới) ---------- */
+.pstrip{display:flex;align-items:center;gap:clamp(8px,2.4vw,14px);padding:6px 12px;position:relative;
+  border-radius:20px 18px 22px 16px;background:#ffffff55;border:2.5px solid transparent;transition:.25s}
+.pstrip.active{background:#ffffffaa;border-color:var(--clr);box-shadow:2px 3px 0 var(--shadow)}
+.pchar{flex:0 0 auto;width:clamp(46px,11vw,66px)}
+.pchar svg{width:100%;height:auto;display:block;transform-origin:50% 90%}
+.pstrip.active .pchar{animation:bob 1.1s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-5px) rotate(2deg)}}
+.bowl{flex:0 0 auto;position:relative;width:clamp(58px,15vw,90px);aspect-ratio:1}
+.bowl-ring{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.bowl-pieces{position:absolute;inset:12%}
+.bowl .piece{--ps:clamp(8px,1.9vw,13px);box-shadow:1px 1px 1px #0004, inset 0 1px 1px #fff5}
+.bowl .qtrophy{position:absolute;width:clamp(14px,3.3vw,21px);height:clamp(14px,3.3vw,21px);
+  transform:translate(-50%,-50%) rotate(-8deg);border-radius:54% 46% 50% 50%/48% 52% 48% 52%;
+  background:radial-gradient(120% 120% at 36% 30%, #d98c63, var(--brick) 62%, #7d2f1c);box-shadow:1px 2px 2px #0005, inset 0 2px 3px #fff6}
+.bowl .qtrophy.born,.bowl .piece.born{animation:plop .3s cubic-bezier(.3,1.5,.5,1)}
+.bowl-count{position:absolute;bottom:-6px;right:-4px;background:var(--card);border:2.5px solid var(--clr);
+  border-radius:50%;min-width:25px;height:25px;display:grid;place-items:center;font-size:13px;color:var(--ink);padding:0 4px;box-shadow:1px 1px 0 var(--shadow)}
+.pinfo{flex:1;min-width:0}
+.pname{display:flex;align-items:center;gap:7px;font-size:17px;color:var(--clr)}
+.pname .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pname .dot{width:12px;height:12px;border-radius:60% 40% 55% 45%;background:var(--clr);flex:0 0 auto}
+.ppts{font-size:clamp(22px,5vw,30px);line-height:1.02;color:var(--ink)}
+.pbd{color:var(--ink-soft);font-size:13px;margin-top:-2px}
+.turn-tag{position:absolute;top:7px;right:13px;font-size:14px;color:var(--clr);opacity:0;transition:.2s}
+.pstrip.active .turn-tag{opacity:1}
+#strip-top{--clr:var(--p2)} #strip-bot{--clr:var(--p1)}
+
+/* flying fist that carries loot into the ring */
+#flyer{position:fixed;z-index:200;width:56px;left:0;top:0;transform:translate(-50%,-60%) rotate(8deg);
+  pointer-events:none;opacity:0;filter:drop-shadow(2px 5px 3px #0004)}
+#flyer.show{opacity:1}
+#flyer svg{width:100%;height:auto;display:block}
+#flyer .f-open{display:none}#flyer .f-fist{display:block}
+#flyer.drop{transform:translate(-50%,-60%) rotate(26deg)}
+#flyer.drop .f-fist{display:none}#flyer.drop .f-open{display:block}
+#flyer .flyer-loot{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:700;
+  color:var(--ink);background:#fff9;padding:0 6px;border-radius:10px;white-space:nowrap}
+
+/* menu: name input + character picker */
+.nameinput{width:100%;padding:9px 11px;border:2px solid var(--card-edge);border-radius:11px;background:#fff8;
+  font-family:var(--font);font-size:16px;color:var(--ink)}
+.charrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.charbtn{width:50px;height:64px;background:#fff7;border:2px solid var(--card-edge);border-radius:13px;
+  padding:3px 2px;display:grid;place-items:center;transition:.12s}
+.charbtn[aria-pressed="true"]{background:var(--chalk-y);border-color:var(--brick)}
+.charbtn svg{width:100%;height:100%}
+
+/* ---------- board ---------- */
+.board-wrap{position:relative;border-radius:26px;padding:clamp(8px,2vw,16px);
+  background:
+    radial-gradient(120% 130% at 50% 18%, #e6cda0 0%, var(--earth-2) 60%, var(--earth-3) 100%);
+  box-shadow:inset 0 3px 10px #fff4, inset 0 -10px 26px #0003, 3px 8px 0 var(--shadow);
+  border:3px solid #00000018;}
+.board-inner{position:relative;width:100%;aspect-ratio:1000/462}
+#boardsvg{position:absolute;inset:0;width:100%;height:100%;display:block}
+#layer{position:absolute;inset:0}
+
+/* cell hit/piece boxes (positioned in viewBox % by JS) */
+.cellbox{position:absolute;transform:translate(-50%,-50%)}
+.cellbox.selectable{cursor:pointer}
+.pieces{position:absolute;inset:18% 12% 12%;}
+.count{position:absolute;top:2%;left:50%;transform:translateX(-50%) rotate(-4deg);
+  font-size:clamp(15px,3.1vw,23px);color:var(--ink);text-shadow:1px 1px 0 #fff8;line-height:1}
+.cellbox[data-quan] .count{top:6%}
+
+.piece{position:absolute;width:var(--ps,18px);height:var(--ps,18px);transform:translate(-50%,-50%) rotate(var(--rot,0deg));
+  box-shadow:1px 2px 2px #0004, inset 0 2px 2px #ffffff55, inset 0 -2px 3px #0003;}
+.piece.born{animation:plop .28s cubic-bezier(.3,1.5,.5,1)}
+@keyframes plop{0%{transform:translate(-50%,-150%) rotate(var(--rot,0deg)) scale(.3);opacity:0}70%{opacity:1}100%{transform:translate(-50%,-50%) rotate(var(--rot,0deg)) scale(1)}}
+
+.quanstone{position:absolute;top:46%;left:50%;width:var(--qs,52px);height:var(--qs,52px);transform:translate(-50%,-50%) rotate(-6deg);
+  border-radius:54% 46% 50% 50%/48% 52% 48% 52%;
+  background:radial-gradient(120% 120% at 36% 30%, #d98c63, var(--brick) 62%, #7d2f1c);
+  box-shadow:2px 4px 5px #0005, inset 0 3px 6px #ffffff66, inset 0 -3px 6px #0004;}
+
+/* SKINS */
+[data-skin="stone"] .piece{border-radius:56% 44% 52% 48%/48% 56% 44% 52%;
+  background:radial-gradient(120% 120% at 35% 28%, #cfc3ad, var(--pc,#9a8c79) 62%, #5f5446)}
+[data-skin="bi"] .piece{border-radius:50%;
+  background:radial-gradient(110% 110% at 32% 26%, #ffffffe0, var(--pc,#5aa0d0) 52%, color-mix(in srgb,var(--pc,#5aa0d0) 55%, #102036));}
+[data-skin="nhua"] .piece{border-radius:50%;
+  background:radial-gradient(120% 120% at 34% 28%, #fff9, var(--pc,#e0533f) 58%, color-mix(in srgb,var(--pc,#e0533f) 65%,#000));}
+
+/* ---------- the hand (multi-state, hand-drawn) ---------- */
+#hand{position:absolute;width:13%;left:0;top:0;transform:translate(-50%,-58%) rotate(var(--hr,6deg));
+  transition:left var(--drop-ms) cubic-bezier(.4,.1,.3,1), top var(--drop-ms) cubic-bezier(.4,.1,.3,1), transform .18s ease;
+  pointer-events:none;z-index:30;opacity:0;filter:drop-shadow(2px 5px 3px #0004)}
+#hand.show{opacity:1}
+#hand svg{width:100%;height:auto}
+#hand .held{position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:clamp(13px,2.6vw,18px);
+  color:var(--ink);background:#fff7;padding:0 7px;border-radius:12px;box-shadow:1px 1px 0 #0002}
+.hstate{display:none}.hstate.on{display:block}
+
+/* direction picker */
+#dirpick{position:absolute;z-index:40;display:none;gap:10px;transform:translate(-50%,-135%);
+  background:var(--card);border:2.5px solid var(--card-edge);padding:7px;border-radius:16px;box-shadow:2px 4px 0 var(--shadow)}
+#dirpick button{background:#fff6;border:2px solid var(--card-edge);color:var(--ink);
+  border-radius:50% 47% 53% 50%/50% 53% 47% 50%;width:46px;height:46px;font-size:23px;display:grid;place-items:center;transition:.12s}
+#dirpick button:active{transform:scale(.9);background:var(--chalk-y)}
+
+/* status */
+.status{min-height:24px;text-align:center;color:var(--ink);font-size:clamp(15px,3.3vw,19px)}
+.status b{color:var(--brick)}
+.footer-note{text-align:center;color:var(--ink-soft);font-size:13px}
+
+/* ---------- overlays ---------- */
+.overlay{position:fixed;inset:0;background:rgba(40,28,16,.5);backdrop-filter:blur(3px);
+  display:grid;place-items:center;padding:18px;z-index:100}
+.overlay.hidden{display:none}
+.panel{width:min(460px,100%);background:var(--card);border:3px solid var(--card-edge);
+  border-radius:24px 22px 26px 20px;padding:22px;box-shadow:4px 8px 0 var(--shadow);max-height:92dvh;overflow:auto}
+.panel h2{font-family:var(--font);margin:0 0 2px;font-size:30px;color:var(--ink)}
+.panel .lead{color:var(--ink-soft);font-size:14.5px;margin:0 0 16px;font-family:var(--font-ui)}
+.field{margin-bottom:14px}
+.field>label{display:block;font-size:17px;margin-bottom:7px;color:var(--ink)}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.seg button{flex:1;min-width:84px;background:#fff7;border:2px solid var(--card-edge);color:var(--ink);
+  padding:10px 8px;border-radius:13px;font-size:15px;font-family:var(--font);transition:.12s}
+.seg button[aria-pressed="true"]{background:var(--chalk-y);border-color:var(--brick)}
+.menu-actions{display:flex;flex-direction:column;gap:9px;margin-top:6px}
+.big-btn{width:100%;border:none;color:#fff;font-size:19px;padding:13px;border-radius:15px;
+  font-family:var(--font);box-shadow:2px 3px 0 var(--shadow);transition:transform .1s}
+.big-btn:active{transform:translateY(2px);box-shadow:1px 1px 0 var(--shadow)}
+.big-btn.primary{background:var(--brick)} .big-btn.ghost{background:#fff7;color:var(--ink);border:2px solid var(--card-edge);box-shadow:none}
+.close-x{float:right;background:none;border:none;color:var(--ink-soft);font-size:26px;line-height:1}
+.rules-body{font-size:14.5px;line-height:1.62;color:var(--ink-soft);font-family:var(--font-ui)}
+.rules-body h3{color:var(--ink);font-size:15px;margin:13px 0 3px;font-family:var(--font)}
+.rules-body code{background:#0001;padding:1px 5px;border-radius:6px;color:var(--ink)}
+.win-banner{font-size:30px;text-align:center;margin:0 0 2px}
+.win-pts{display:flex;gap:10px;margin:12px 0}
+.win-pts .wp{flex:1;border:2.5px solid var(--card-edge);border-radius:15px;padding:11px;text-align:center;background:#fff7}
+.win-pts .wp .v{font-size:30px}
+
+@media(max-width:520px){ .brand .sub{display:none} .score .pts{font-size:26px} }
+@media(prefers-reduced-motion:reduce){ #hand{transition:none} .piece.born{animation:none} }
+</style>
+</head>
+<body>
+
+<!-- ===================== VILLAGE BACKDROP ===================== -->
+<svg id="bg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <filter id="wob" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="7"/>
+    </filter>
+    <filter id="chalksm" x="-12%" y="-12%" width="124%" height="124%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="2" seed="6" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="3"/>
+    </filter>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#bfe3e8"/><stop offset="1" stop-color="#eaf3df"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="url(#sky)"/>
+  <circle cx="980" cy="140" r="58" fill="#f6e08a" filter="url(#wob)"/>
+  <g filter="url(#wob)" opacity=".9">
+    <!-- distant hills -->
+    <path d="M-20,330 Q200,250 430,320 T900,300 T1230,330 L1230,470 L-20,470 Z" fill="#9cbf7e"/>
+    <path d="M-20,380 Q260,300 560,360 T1230,360 L1230,500 L-20,500 Z" fill="#7ea866"/>
+    <!-- coconut tree -->
+    <path d="M150,470 Q140,360 165,300" stroke="#7a5a3a" stroke-width="11" fill="none" stroke-linecap="round"/>
+    <g fill="#5f8f4e">
+      <path d="M165,300 Q90,270 60,300 Q110,288 165,308Z"/>
+      <path d="M165,300 Q240,270 275,298 Q210,288 165,308Z"/>
+      <path d="M165,300 Q120,235 150,210 Q160,260 172,302Z"/>
+      <path d="M165,300 Q210,235 185,205 Q175,258 168,302Z"/>
+    </g>
+    <!-- little thatched house -->
+    <g transform="translate(900,360)">
+      <path d="M-70,60 L-70,10 L70,10 L70,60 Z" fill="#d9c39a"/>
+      <path d="M-90,12 L0,-42 L90,12 Z" fill="#a87a4a"/>
+      <rect x="-18" y="22" width="36" height="38" fill="#7a5a3a"/>
+    </g>
+  </g>
+  <!-- paddy field foreground -->
+  <g filter="url(#wob)">
+    <path d="M-20,455 Q600,420 1230,455 L1230,820 L-20,820 Z" fill="#cfe0a3"/>
+    <g stroke="#aac279" stroke-width="3" opacity=".7">
+      <path d="M-20,520 Q600,495 1230,520" fill="none"/>
+      <path d="M-20,590 Q600,565 1230,590" fill="none"/>
+      <path d="M-20,670 Q600,645 1230,670" fill="none"/>
+    </g>
+  </g>
+</svg>
+
+<div id="app">
+  <div class="topbar">
+    <div class="brand"><h1>Ô ăn quan</h1><span class="sub">trò chơi dân gian</span></div>
+    <div class="topbtns">
+      <button class="icon-btn" id="btn-sound" title="Âm thanh">🔊</button>
+      <button class="icon-btn" id="btn-rules" title="Luật chơi">📖</button>
+      <button class="icon-btn" id="btn-home" title="Về màn hình chính">🏠</button>
+    </div>
+  </div>
+
+  <div class="pstrip" id="strip-top">
+    <div class="pchar"></div>
+    <div class="bowl" id="bowl-2">
+      <svg class="bowl-ring" viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="50" cy="50" r="45" fill="none" stroke="var(--ink-soft)" stroke-width="3.4" filter="url(#chalksm)"/>
+        <circle cx="50" cy="50" r="45" fill="none" stroke="var(--chalk-r)" stroke-width="1.6" filter="url(#chalksm)"/>
+      </svg>
+      <div class="bowl-pieces"></div><div class="bowl-count">0</div>
+    </div>
+    <div class="pinfo">
+      <div class="pname"><span class="dot"></span><span class="lbl">Người 2</span></div>
+      <div class="ppts">0</div><div class="pbd">0 dân · 0 quan</div>
+    </div>
+    <div class="turn-tag">đang đi</div>
+  </div>
+
+  <div class="board-wrap">
+    <div class="board-inner">
+      <svg id="boardsvg" viewBox="0 0 1000 462" preserveAspectRatio="none">
+        <defs>
+          <filter id="chalk" x="-4%" y="-4%" width="108%" height="108%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="9" result="n"/>
+            <feDisplacementMap in="SourceGraphic" in2="n" scale="5"/>
+          </filter>
+        </defs>
+        <g id="boardlines" filter="url(#chalk)" fill="none" stroke-linecap="round" stroke-linejoin="round"></g>
+      </svg>
+      <div id="layer">
+        <!-- cell boxes + hand + dirpick injected by RenderUI -->
+        <div id="hand">
+          <span class="held"></span>
+          <!-- open palm -->
+          <svg class="hstate s-open on" viewBox="0 0 120 130">
+            <g fill="var(--skinflesh)" stroke="var(--ink)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+              <path d="M30,110 L26,72 Q24,64 16,64 Q10,63 12,55 Q14,48 22,51 Q27,53 29,61 L31,46 L31,28 Q31,22 39,22 Q47,22 47,28 L47,46 L48,46 L48,24 Q48,18 53,18 Q59,18 59,24 L59,46 L61,47 L61,28 Q61,22 67,22 Q73,22 73,28 L73,47 L75,50 L75,34 Q75,29 79,29 Q84,29 84,34 L84,50 L86,72 Q88,96 70,110 Z"/>
+            </g>
+          </svg>
+          <!-- fist (holding) -->
+          <svg class="hstate s-fist" viewBox="0 0 120 130">
+            <g fill="var(--skinflesh)" stroke="var(--ink)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+              <path d="M34,52 Q30,38 44,36 Q60,34 78,40 Q92,46 90,66 Q90,96 64,104 Q38,104 32,80 Q30,64 34,52Z"/>
+              <path d="M44,44 q6,-8 12,0 M58,42 q6,-8 12,0 M72,46 q6,-7 11,1" stroke-width="4" fill="none"/>
+              <path d="M30,60 Q22,58 22,70 Q28,78 36,74" />
+            </g>
+          </svg>
+          <!-- fist tilted down (dropping) -->
+          <svg class="hstate s-drop" viewBox="0 0 120 130">
+            <g fill="var(--skinflesh)" stroke="var(--ink)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" transform="rotate(18 60 70)">
+              <path d="M34,50 Q30,36 44,34 Q60,32 78,38 Q92,44 90,64 Q90,98 62,106 Q36,106 32,80 Q30,62 34,50Z"/>
+              <path d="M46,96 q6,9 13,3 M62,98 q7,8 13,1" stroke-width="4" fill="none"/>
+              <path d="M30,58 Q22,56 22,68 Q28,76 36,72"/>
+            </g>
+          </svg>
+        </div>
+        <div id="dirpick">
+          <button class="dl" data-dir="1" title="Rải sang trái">←</button>
+          <button class="dr" data-dir="-1" title="Rải sang phải">→</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pstrip active" id="strip-bot">
+    <div class="pchar"></div>
+    <div class="bowl" id="bowl-1">
+      <svg class="bowl-ring" viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="50" cy="50" r="45" fill="none" stroke="var(--ink-soft)" stroke-width="3.4" filter="url(#chalksm)"/>
+        <circle cx="50" cy="50" r="45" fill="none" stroke="var(--chalk-r)" stroke-width="1.6" filter="url(#chalksm)"/>
+      </svg>
+      <div class="bowl-pieces"></div><div class="bowl-count">0</div>
+    </div>
+    <div class="pinfo">
+      <div class="pname"><span class="dot"></span><span class="lbl">Người 1</span></div>
+      <div class="ppts">0</div><div class="pbd">0 dân · 0 quan</div>
+    </div>
+    <div class="turn-tag">đang đi</div>
+  </div>
+
+  <div class="status" id="status">Chạm vào ô có quân ở sân của bạn để đi.</div>
+  <div class="footer-note">Chọn ô → chọn hướng rải. Quan = 5 điểm khi tính chung cuộc.</div>
+</div>
+
+<div id="flyer">
+  <span class="flyer-loot"></span>
+  <svg class="f-fist" viewBox="0 0 120 130" aria-hidden="true">
+    <g fill="var(--skinflesh)" stroke="var(--ink)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M34,52 Q30,38 44,36 Q60,34 78,40 Q92,46 90,66 Q90,96 64,104 Q38,104 32,80 Q30,64 34,52Z"/>
+      <path d="M44,44 q6,-8 12,0 M58,42 q6,-8 12,0 M72,46 q6,-7 11,1" stroke-width="4" fill="none"/>
+      <path d="M30,60 Q22,58 22,70 Q28,78 36,74"/>
+    </g>
+  </svg>
+  <svg class="f-open" viewBox="0 0 120 130" aria-hidden="true">
+    <g fill="var(--skinflesh)" stroke="var(--ink)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M30,110 L26,72 Q24,64 16,64 Q10,63 12,55 Q14,48 22,51 Q27,53 29,61 L31,46 L31,28 Q31,22 39,22 Q47,22 47,28 L47,46 L48,46 L48,24 Q48,18 53,18 Q59,18 59,24 L59,46 L61,47 L61,28 Q61,22 67,22 Q73,22 73,28 L73,47 L75,50 L75,34 Q75,29 79,29 Q84,29 84,34 L84,50 L86,72 Q88,96 70,110 Z"/>
+    </g>
+  </svg>
+</div>
+
+<!-- ===== MENU ===== -->
+<div class="overlay" id="menu">
+  <div class="panel">
+    <h2>Ô ăn quan</h2>
+    <p class="lead">Bốc một ô dân, rải từng viên sỏi theo hướng đã chọn, ăn quân khi rải đúng nhịp. Ai nhiều điểm hơn thì thắng.</p>
+    <div class="field"><label>Chế độ chơi</label>
+      <div class="seg" id="seg-mode">
+        <button data-v="2p" aria-pressed="true">👥 2 người</button>
+        <button data-v="ai">🤖 Đấu với máy</button>
+      </div></div>
+    <div class="field" id="field-diff" style="display:none"><label>Độ khó của máy</label>
+      <div class="seg" id="seg-diff">
+        <button data-v="easy">Dễ</button>
+        <button data-v="hard" aria-pressed="true">Khó</button>
+      </div></div>
+    <div class="field"><label>👤 Người dưới (bạn)</label>
+      <input class="nameinput" id="name-1" maxlength="14" placeholder="Tên của bạn">
+      <div class="charrow" id="chars-1"></div>
+    </div>
+    <div class="field"><label>👤 Người trên</label>
+      <input class="nameinput" id="name-2" maxlength="14" placeholder="Tên đối thủ">
+      <div class="charrow" id="chars-2"></div>
+    </div>
+    <div class="field"><label>Quân cờ</label>
+      <div class="seg" id="seg-skin">
+        <button data-v="stone" aria-pressed="true">🪨 Sỏi đá</button>
+        <button data-v="bi">🔵 Hòn bi</button>
+        <button data-v="nhua">🔴 Viên nhựa</button>
+      </div></div>
+    <div class="field"><label>Tốc độ rải</label>
+      <div class="seg" id="seg-speed">
+        <button data-v="slow">🐢 Chậm</button>
+        <button data-v="normal" aria-pressed="true">🚶 Vừa</button>
+        <button data-v="fast">🐇 Nhanh</button>
+      </div></div>
+    <div class="menu-actions">
+      <button class="big-btn ghost" id="btn-resume" style="display:none">↩ Tiếp tục ván</button>
+      <button class="big-btn primary" id="btn-start">Bắt đầu ván mới</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== RULES ===== -->
+<div class="overlay hidden" id="rules">
+  <div class="panel">
+    <button class="close-x" data-close="rules">×</button>
+    <h2>Luật chơi</h2>
+    <div class="rules-body">
+      <h3>Bàn cờ</h3>10 ô dân (mỗi bên 5) + 2 ô quan hai đầu. Mỗi ô dân khởi đầu 5 dân; mỗi ô quan có 1 viên quan lớn.
+      <h3>Đi quân</h3>Chọn 1 ô dân <b>có quân</b> bên sân mình và chọn hướng. Bốc hết quân, rải mỗi ô 1 viên theo hướng đó (rải cả vào ô quan).
+      <h3>Sau viên cuối</h3>Ô kế tiếp: là ô dân <b>có quân</b> → bốc rải tiếp; là ô quan → <b>dừng lượt</b>; là ô <b>trống</b> → xét ô ngay sau để <b>ăn</b>.
+      <h3>Ăn quân &amp; ăn dây</h3>Ô sau ô trống có quân → ăn trọn. Kế đó lại trống rồi có quân → ăn tiếp, tới khi gặp 2 ô trống liền nhau.
+      <h3>Ăn quan (ván này)</h3>Ô quan còn viên quan gốc chỉ ăn được khi đã có <b>≥5 dân</b> khác trong đó. Mất viên quan gốc rồi thì ăn với số dân bất kỳ.
+      <h3>Hết quân bên sân</h3>Rút 5 điểm từ quỹ rải lại 5 ô; thiếu thì vay đối phương.
+      <h3>Kết thúc</h3>Ván chỉ kết thúc khi <b>cả hai ô quan trống rỗng hoàn toàn</b> (hết cả quan lẫn dân). Ô quan đã mất viên quan lớn nhưng còn dân vẫn được ăn bình thường. Khi đó dân còn lại bên sân ai về người đó. <code>Điểm = dân + quan×5</code>.
+    </div>
+  </div>
+</div>
+
+<!-- ===== WIN ===== -->
+<div class="overlay hidden" id="win">
+  <div class="panel">
+    <div class="win-banner" id="win-banner">🎉</div>
+    <p class="lead" id="win-sub" style="text-align:center"></p>
+    <div class="win-pts">
+      <div class="wp" style="border-color:var(--p1)"><div class="v" id="win-p1">0</div><div id="winlbl-1">Người 1</div></div>
+      <div class="wp" style="border-color:var(--p2)"><div class="v" id="win-p2">0</div><div id="winlbl-2">Người 2</div></div>
+    </div>
+    <div class="menu-actions">
+      <button class="big-btn primary" id="btn-again">Chơi lại</button>
+      <button class="big-btn ghost" id="btn-tohome">Về màn hình chính</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ================================================================
+   Ô ĂN QUAN — single file
+   GameState · MoveLogic · AnimationController · RenderUI · AI
+   Ring index 0..11 quanh bàn cờ:
+     0 quan trái · 1..5 hàng dưới (Người 1) · 6 quan phải · 7..11 hàng trên (Người 2)
+   dir +1 = ngược chiều KĐH · dir -1 = cùng chiều KĐH
+   ================================================================ */
+const P1_CELLS=[1,2,3,4,5], P2_CELLS=[7,8,9,10,11];
+const QUAN_SCORE=5, QUAN_EAT_MIN_DAN=5, RELAY_GUARD=4000;
+const isQuan=i=>i===0||i===6;
+const ownerOf=i=>P1_CELLS.includes(i)?1:P2_CELLS.includes(i)?2:0;
+const cellsOf=p=>p===1?P1_CELLS:P2_CELLS;
+const next=(i,d)=>(i+d+12)%12;
+
+/* viewBox coordinates (0..1000 x 0..462) */
+const COL_CX=[230,364,498,632,766], CY_TOP=128, CY_BOT=331;
+const COORD={ 0:{x:80,y:231,w:150,h:392,quan:1}, 6:{x:920,y:231,w:150,h:392,quan:1} };
+[11,10,9,8,7].forEach((idx,c)=>COORD[idx]={x:COL_CX[c],y:CY_TOP,w:130,h:188});
+[1,2,3,4,5].forEach((idx,c)=>COORD[idx]={x:COL_CX[c],y:CY_BOT,w:130,h:188});
+
+/* ===================== GameState ===================== */
+const FOLK_NAMES=["Tí","Tèo","Bi","Na","Mít","Cún","Tủn","Tép"];
+const State={ board:[],current:1,players:{1:{dan:0,quan:0},2:{dan:0,quan:0}},
+  mode:"2p",diff:"hard",skin:"stone",speed:"normal",sound:true,over:false,locked:false,started:false,
+  names:{1:"Tí",2:"Tèo"}, chars:{1:"cuoi",2:"troc"} };
+
+/* character library — original folk-kid drawings (bé gái tóc dài, tóc chỏm, đầu trọc, đội khăn...) */
+const CHAR_LIST=["gai","cuoi","troc","xanh","tim","khan"];
+function charSVG(type){
+  const C={ gai:{shirt:"#e87fa8",hair:"gai"}, cuoi:{shirt:"#5fb37a",hair:"short",smile:1},
+    troc:{shirt:"#f2c14e",hair:"troc"}, xanh:{shirt:"#5a9fd4",hair:"short"},
+    tim:{shirt:"#9b6fc0",hair:"chom"}, khan:{shirt:"#4bb0a0",hair:"khan"} }[type]||{shirt:"#5fb37a",hair:"short"};
+  const ink="var(--ink)", flesh="var(--skinflesh)";
+  let hair="";
+  if(C.hair==="gai") hair=`<path d="M20,40 Q18,15 40,14 Q62,15 60,40 Q60,60 55,66 L52,40 Q40,30 28,40 L25,66 Q20,58 20,40 Z" fill="#2e2118"/>`;
+  else if(C.hair==="short") hair=`<path d="M24,34 Q26,17 40,17 Q54,17 56,34 Q40,27 24,34 Z" fill="#2e2118"/>`;
+  else if(C.hair==="troc") hair=`<path d="M37,21 Q39,11 45,12 Q41,17 43,24 Z" fill="#2e2118"/>`;
+  else if(C.hair==="chom") hair=`<path d="M40,20 Q40,9 48,11 Q43,16 45,23" fill="none" stroke="#2e2118" stroke-width="3.4"/><path d="M27,30 Q31,21 40,21 Q45,21 48,25 Q38,24 27,32 Z" fill="#2e2118"/>`;
+  else if(C.hair==="khan") hair=`<path d="M22,33 Q26,19 40,19 Q54,19 58,33 Q40,26 22,33 Z" fill="#c9433a"/><path d="M23,33 L17,42 M57,33 L63,42" stroke="#c9433a" stroke-width="6" stroke-linecap="round"/>`;
+  const mouth=C.smile
+    ? `<path d="M33,43 Q40,53 47,43 Q40,46 33,43 Z" fill="#9c3b3b" stroke="${ink}" stroke-width="2.6" stroke-linejoin="round"/>`
+    : `<path d="M35,45 Q40,49 45,45" fill="none" stroke="${ink}" stroke-width="3"/>`;
+  return `<svg viewBox="0 0 80 110" aria-hidden="true">
+    <g stroke="${ink}" stroke-width="4.4" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M34,86 L32,104" fill="none"/><path d="M46,86 L48,104" fill="none"/>
+      <path d="M25,58 Q22,84 31,89 L49,89 Q58,84 55,58 Q40,52 25,58 Z" fill="${C.shirt}"/>
+      <path d="M26,62 Q14,70 15,84" fill="none"/><path d="M54,62 Q66,70 65,84" fill="none"/>
+      <circle cx="40" cy="38" r="16" fill="${flesh}"/>
+      ${hair}
+      <circle cx="34" cy="39" r="1.9" fill="${ink}" stroke="none"/>
+      <circle cx="46" cy="39" r="1.9" fill="${ink}" stroke="none"/>
+      ${mouth}
+    </g></svg>`;
+}
+function freshBoard(){const b=[];for(let i=0;i<12;i++)b.push(isQuan(i)?{dan:0,quan:1}:{dan:5,quan:0});return b;}
+function newGame(){State.board=freshBoard();State.current=1;State.players={1:{dan:0,quan:0},2:{dan:0,quan:0}};
+  State.over=false;State.locked=false;State.started=true;State.moveCount=0;Selection.clear();}
+
+/* ===================== MoveLogic ===================== */
+const cloneBoard=b=>b.map(c=>({dan:c.dan,quan:c.quan}));
+function eatable(c,i){ if(isQuan(i)) return c.quan>0 ? c.dan>=QUAN_EAT_MIN_DAN : c.dan>0; return c.dan>0; }
+function cellEmpty(c,i){ return c.dan===0 && (isQuan(i)?c.quan===0:true); }
+const sideEmpty=(b,p)=>cellsOf(p).every(i=>b[i].dan===0);
+const quanStonesLeft=b=>b[0].quan+b[6].quan;
+function legalMoves(b,p){const m=[];for(const i of cellsOf(p))if(b[i].dan>0){m.push({i,dir:1});m.push({i,dir:-1});}return m;}
+
+function simulateMove(board,start,dir){
+  const b=cloneBoard(board), events=[], gain={dan:0,quan:0};
+  let hand=b[start].dan; b[start].dan=0; events.push({t:"pickup",idx:start,n:hand});
+  let pos=start, guard=0;
+  while(true){
+    if(++guard>RELAY_GUARD) break;                     // chống treo (relay vô hạn)
+    while(hand>0){ pos=next(pos,dir); b[pos].dan++; hand--; events.push({t:"drop",idx:pos}); }
+    const nxt=next(pos,dir);
+    if(isQuan(nxt)) break;                              // case 2
+    if(b[nxt].dan>0){ hand=b[nxt].dan; b[nxt].dan=0; pos=nxt; events.push({t:"pickup",idx:nxt,n:hand}); continue; } // case 1
+    let gap=nxt;                                        // case 3: ăn / ăn dây
+    while(true){
+      const eat=next(gap,dir);
+      if(eatable(b[eat],eat)){
+        gain.dan+=b[eat].dan; gain.quan+=b[eat].quan;
+        events.push({t:"capture",idx:eat,dan:b[eat].dan,quan:b[eat].quan});
+        b[eat].dan=0; b[eat].quan=0; gap=next(eat,dir);
+        if(cellEmpty(b[gap],gap)) continue; break;
+      } break;
+    }
+    break;
+  }
+  return {events,board:b,gain};
+}
+function spendBank(pl,amount){
+  const bank=pl.dan+pl.quan*QUAN_SCORE, spend=Math.min(amount,bank); let rem=spend;
+  const fd=Math.min(pl.dan,rem); pl.dan-=fd; rem-=fd;
+  while(rem>0&&pl.quan>0){ pl.quan--; const use=Math.min(QUAN_SCORE,rem); rem-=use; pl.dan+=QUAN_SCORE-use; }
+  return spend;
+}
+const finalScore=pl=>pl.dan+pl.quan*QUAN_SCORE;
+
+/* ===================== AI (nhanh) ===================== */
+function aiPick(){
+  const moves=legalMoves(State.board,2); if(!moves.length) return null;
+  if(State.diff==="easy") return moves[(Math.random()*moves.length)|0];
+  let best=null,bestS=-1e9;
+  for(const mv of moves){
+    const r=simulateMove(State.board,mv.i,mv.dir);
+    const my=r.gain.dan+r.gain.quan*QUAN_SCORE;
+    let oppBest=0;                                       // nhìn 1 nước phản đòn của Người 1
+    for(const om of legalMoves(r.board,1)){
+      const g=simulateMove(r.board,om.i,om.dir).gain; oppBest=Math.max(oppBest,g.dan+g.quan*QUAN_SCORE);
+    }
+    const s=my-0.6*oppBest+Math.random()*0.25;
+    if(s>bestS){bestS=s;best=mv;}
+  }
+  return best;
+}
+
+/* ===================== AnimationController ===================== */
+const SPEED={slow:480,normal:300,fast:150};
+const Audio_={ctx:null,
+  ensure(){if(!this.ctx){try{this.ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}},
+  click(f=200){ if(!State.sound)return; this.ensure(); if(!this.ctx)return;
+    const t=this.ctx.currentTime,o=this.ctx.createOscillator(),g=this.ctx.createGain();
+    o.type="triangle"; o.frequency.setValueAtTime(f+Math.random()*40,t); o.frequency.exponentialRampToValueAtTime(f*0.5,t+0.06);
+    g.gain.setValueAtTime(0.16,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.06);
+    o.connect(g).connect(this.ctx.destination); o.start(t); o.stop(t+0.07); },
+  eat(){ if(!State.sound)return; this.ensure(); if(!this.ctx)return;
+    const t=this.ctx.currentTime,o=this.ctx.createOscillator(),g=this.ctx.createGain();
+    o.type="sine"; o.frequency.setValueAtTime(520,t); o.frequency.exponentialRampToValueAtTime(880,t+0.12);
+    g.gain.setValueAtTime(0.001,t); g.gain.exponentialRampToValueAtTime(0.2,t+0.03); g.gain.exponentialRampToValueAtTime(0.001,t+0.18);
+    o.connect(g).connect(this.ctx.destination); o.start(t); o.stop(t+0.2); }
+};
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const stepMs=()=>SPEED[State.speed]||300;
+
+const Hand={ el:null,held:null,
+  init(){ this.el=document.getElementById("hand"); this.held=this.el.querySelector(".held");
+    document.documentElement.style.setProperty("--drop-ms",stepMs()+"ms"); },
+  state(s){ this.el.querySelectorAll(".hstate").forEach(x=>x.classList.remove("on"));
+    this.el.querySelector(".s-"+s).classList.add("on"); },
+  setHeld(n){ this.held.textContent=n>0?n:""; },
+  async moveTo(idx,rot=6){ const c=COORD[idx];
+    this.el.classList.add("show");
+    this.el.style.left=(c.x/1000*100)+"%"; this.el.style.top=(c.y/462*100)+"%";
+    this.el.style.setProperty("--hr",rot+"deg");
+    await wait(Math.max(120,stepMs()*0.75)); },
+  hide(){ this.el.classList.remove("show"); }
+};
+
+const Anim={ display:[],
+  async play(events){
+    document.documentElement.style.setProperty("--drop-ms",stepMs()+"ms");
+    this.display=cloneBoard(State.board); RenderUI.renderAll(this.display);
+    let holding=0;
+    for(const ev of events){
+      if(ev.t==="pickup"){
+        Hand.state("open"); await Hand.moveTo(ev.idx,6);
+        Hand.state("fist"); holding=ev.n; this.display[ev.idx].dan=0;
+        RenderUI.renderCell(ev.idx,this.display); Hand.setHeld(holding);
+        Audio_.click(150); await wait(stepMs()*0.5);
+      } else if(ev.t==="drop"){
+        Hand.state("fist"); await Hand.moveTo(ev.idx,6);
+        Hand.state("drop");                              // úp nắm tay xuống
+        holding--; this.display[ev.idx].dan++;
+        RenderUI.renderCell(ev.idx,this.display,true);
+        Hand.setHeld(holding); Audio_.click(210);
+        await wait(stepMs()*0.55);
+        Hand.state(holding>0?"fist":"open");
+        await wait(stepMs()*0.45);
+      } else if(ev.t==="capture"){
+        Hand.hide();
+        const el=RenderUI.cellEl(ev.idx); el.style.transition="transform .2s";
+        el.animate([{transform:"translate(-50%,-50%) scale(1)"},{transform:"translate(-50%,-50%) scale(1.18)"},{transform:"translate(-50%,-50%) scale(1)"}],{duration:480});
+        Audio_.eat(); await wait(280);
+        this.display[ev.idx].dan=0; this.display[ev.idx].quan=0; RenderUI.renderCell(ev.idx,this.display);
+        const pl=State.players[State.current]; pl.dan+=ev.dan; pl.quan+=ev.quan; RenderUI.renderScores();
+        await Flyer.carry(ev.idx, State.current, ev.dan, ev.quan);   // nắm tay mang vào vòng
+        RenderUI.renderBowl(State.current,true);
+        await wait(120);
+      }
+    }
+    Hand.state("open"); Hand.hide();
+  },
+  async playRefill(cells){
+    document.documentElement.style.setProperty("--drop-ms",stepMs()+"ms");
+    for(const idx of cells){
+      Hand.state("fist"); await Hand.moveTo(idx,6); Hand.state("drop");
+      this.display[idx].dan++; RenderUI.renderCell(idx,this.display,true);
+      Audio_.click(210); await wait(stepMs()*0.5); Hand.state("fist"); await wait(stepMs()*0.4);
+    }
+    Hand.hide();
+  }
+};
+
+/* ===================== Flyer (nắm tay mang chiến tích vào vòng) ===================== */
+const Flyer={ el:null, loot:null,
+  init(){ this.el=document.getElementById("flyer"); this.loot=this.el.querySelector(".flyer-loot"); },
+  place(r){ this.el.style.left=(r.left+r.width/2)+"px"; this.el.style.top=(r.top+r.height/2)+"px"; },
+  async carry(fromIdx,p,dan,quan){
+    if(!this.el) this.init();
+    const cell=RenderUI.cellEl(fromIdx).getBoundingClientRect();
+    const ring=document.getElementById("bowl-"+p).getBoundingClientRect();
+    this.el.style.transition="none"; this.el.classList.remove("drop");
+    this.place(cell);
+    this.loot.textContent=(quan?("Quan"+(dan?" +"+dan:"")):(dan>1?dan:""));
+    this.el.classList.add("show");
+    await wait(60);
+    const ms=Math.max(260, stepMs());
+    this.el.style.transition=`left ${ms}ms cubic-bezier(.4,.1,.3,1), top ${ms}ms cubic-bezier(.4,.1,.3,1)`;
+    this.place(ring);
+    await wait(ms+20);
+    this.el.classList.add("drop"); this.loot.textContent="";   // mở tay thả vào vòng
+    await wait(150);
+    this.el.classList.remove("show");
+    await wait(40);
+  }
+};
+
+const RenderUI={ cellEls:{},
+  buildBoard(){
+    // hand-drawn chalk lines
+    const g=document.getElementById("boardlines"); g.innerHTML="";
+    const stroke=(d,c,w,id)=>`<path d="${d}" stroke="${c}" stroke-width="${w}"${id?` id="${id}"`:""}/>`;
+    const rectPath=(x,y,w,h)=>{const l=x-w/2,t=y-h/2;return `M${l},${t} L${l+w},${t} L${l+w},${t+h} L${l},${t+h} Z`;};
+    let s="";
+    // dan cells (double chalk stroke; inner colored stroke is highlightable on hover)
+    const cols=['var(--chalk-b)','var(--chalk-y)','var(--chalk-r)','var(--chalk-b)','var(--chalk-y)'];
+    [11,10,9,8,7,1,2,3,4,5].forEach((idx,k)=>{ const c=COORD[idx];
+      s+=stroke(rectPath(c.x,c.y,c.w-6,c.h-6),'var(--chalk)',6);
+      s+=stroke(rectPath(c.x,c.y,c.w-12,c.h-12),cols[k%5],4,'line-'+idx);
+    });
+    // quan caps (semicircle ends); inner red stroke highlightable
+    s+=stroke("M158,40 L158,422 C70,422 14,330 14,231 C14,132 70,40 158,40 Z",'var(--chalk)',6);
+    s+=stroke("M842,40 L842,422 C930,422 986,330 986,231 C986,132 930,40 842,40 Z",'var(--chalk)',6);
+    s+=stroke("M158,46 L158,416 C82,416 26,330 26,231 C26,132 82,46 158,46 Z",'var(--chalk-r)',4,'line-0');
+    s+=stroke("M842,46 L842,416 C918,416 974,330 974,231 C974,132 918,46 842,46 Z",'var(--chalk-r)',4,'line-6');
+    // outer frame
+    s+=stroke("M150,30 L850,30 M150,432 L850,432",'var(--chalk)',5);
+    g.innerHTML=s;
+
+    // cell boxes (interaction + pieces)
+    const layer=document.getElementById("layer");
+    layer.querySelectorAll(".cellbox").forEach(e=>e.remove());
+    this.cellEls={};
+    for(let i=0;i<12;i++){ const c=COORD[i];
+      const box=document.createElement("div"); box.className="cellbox"+(ownerOf(i)?"":"");
+      if(isQuan(i)) box.dataset.quan="1";
+      box.dataset.idx=i;
+      box.style.left=(c.x/1000*100)+"%"; box.style.top=(c.y/462*100)+"%";
+      box.style.width=(c.w/1000*100)+"%"; box.style.height=(c.h/462*100)+"%";
+      box.innerHTML=`<div class="count">0</div><div class="pieces"></div>`;
+      layer.insertBefore(box,layer.firstChild);
+      this.cellEls[i]=box;
+    }
+  },
+  cellEl(idx){return this.cellEls[idx];},
+  scatter(idx,i){ let s=Math.sin(idx*97.13+i*43.7+11.1)*1e4; const rx=s-Math.floor(s);
+    s=Math.sin(idx*57.3+i*91.2+3.7)*1e4; const ry=s-Math.floor(s);
+    s=Math.sin(idx*13.1+i*71.9+5.5)*1e4; const rr=s-Math.floor(s);
+    return {x:8+rx*84,y:8+ry*84,rot:(rr*60-30)}; },
+  pcColor(idx,i){ const stone=["#9a8c79","#867a68","#b0a48f","#7d7264","#a59275"];
+    const bright=["#e0533f","#3f9be0","#e0c23f","#5fbf6a","#a86fe0","#e07fb0"];
+    return State.skin==="stone"?stone[(idx*3+i)%stone.length]:bright[(idx*5+i)%bright.length]; },
+  renderCell(idx,board,animLast=false){
+    const el=this.cellEl(idx),cell=board[idx];
+    const pe=el.querySelector(".pieces"),ce=el.querySelector(".count");
+    ce.textContent=cell.dan; ce.style.visibility=(cell.dan>0)?"visible":"hidden";
+    let stone=el.querySelector(".quanstone");
+    if(isQuan(idx)&&cell.quan>0){ if(!stone){stone=document.createElement("div");stone.className="quanstone";el.appendChild(stone);} }
+    else if(stone) stone.remove();
+    const show=Math.min(cell.dan,16); pe.innerHTML="";
+    for(let i=0;i<show;i++){ const p=document.createElement("div");
+      p.className="piece"+(animLast&&i===show-1?" born":"");
+      const s=this.scatter(idx,i);
+      p.style.left=s.x+"%"; p.style.top=s.y+"%"; p.style.setProperty("--rot",s.rot+"deg");
+      p.style.setProperty("--ps","clamp(12px,2.5vw,19px)");
+      p.style.setProperty("--pc",this.pcColor(idx,i)); pe.appendChild(p);
+    }
+  },
+  renderAll(board){for(let i=0;i<12;i++)this.renderCell(i,board);},
+  renderScores(){
+    const upd=(p)=>{ const strip=document.getElementById(p===1?"strip-bot":"strip-top"); const pl=State.players[p];
+      strip.querySelector(".ppts").textContent=finalScore(pl);
+      strip.querySelector(".pbd").textContent=`${pl.dan} dân · ${pl.quan} quan`;
+      strip.querySelector(".lbl").textContent=State.names[p];
+      strip.classList.toggle("active",State.current===p&&!State.over); };
+    upd(1); upd(2);
+  },
+  renderStripChars(){
+    document.querySelector("#strip-bot .pchar").innerHTML=charSVG(State.chars[1]);
+    document.querySelector("#strip-top .pchar").innerHTML=charSVG(State.chars[2]);
+  },
+  _bowlShown:{1:0,2:0},
+  scatterBowl(i){ const R=40, r=R*Math.sqrt((i+0.6)/48), a=i*2.39996323;
+    return {x:50+r*Math.cos(a), y:50+r*Math.sin(a)}; },
+  renderBowl(p,animate){
+    const bowl=document.getElementById("bowl-"+p), pc=bowl.querySelector(".bowl-pieces"), cnt=bowl.querySelector(".bowl-count");
+    const pl=State.players[p], total=pl.dan+pl.quan, prev=this._bowlShown[p]||0, cap=48;
+    pc.innerHTML=""; let i=0;
+    for(let q=0;q<pl.quan && i<cap;q++,i++){ const s=this.scatterBowl(i);
+      const el=document.createElement("div"); el.className="qtrophy"+(animate&&i>=prev?" born":"");
+      el.style.left=s.x+"%"; el.style.top=s.y+"%"; pc.appendChild(el); }
+    const showDan=Math.min(pl.dan,Math.max(0,cap-pl.quan));
+    for(let d=0;d<showDan && i<cap;d++,i++){ const s=this.scatterBowl(i);
+      const el=document.createElement("div"); el.className="piece"+(animate&&i>=prev?" born":"");
+      el.style.left=s.x+"%"; el.style.top=s.y+"%"; el.style.setProperty("--rot",((d*53)%60-30)+"deg");
+      el.style.setProperty("--pc",this.pcColor(200+p,d)); pc.appendChild(el); }
+    cnt.textContent=total; this._bowlShown[p]=total;
+  },
+  renderBowls(animate){ this.renderBowl(1,animate); this.renderBowl(2,animate); },
+  setStatus(h){document.getElementById("status").innerHTML=h;},
+  markSelectable(){
+    Object.values(this.cellEls).forEach(el=>el.classList.remove("selectable"));
+    document.querySelectorAll(".cellbox").forEach(el=>el.style.outline="");
+    if(State.over||State.locked) return;
+    if(State.mode==="ai"&&State.current===2) return;
+    for(const i of cellsOf(State.current)) if(State.board[i].dan>0) this.cellEl(i).classList.add("selectable");
+  }
+};
+
+/* ===================== Selection ===================== */
+const Selection={ idx:null,pick:null,inited:false,
+  init(){ if(this.inited)return; this.inited=true;
+    this.pick=document.getElementById("dirpick");
+    this.pick.querySelectorAll("button").forEach(b=>{
+      b.addEventListener("click",()=>this.confirm(+b.dataset.dir));
+      b.addEventListener("mouseenter",()=>this.preview(+b.dataset.dir));
+      b.addEventListener("mouseleave",()=>this.refreshHl());
+    });
+    document.getElementById("layer").addEventListener("click",e=>{
+      const box=e.target.closest(".cellbox.selectable");
+      if(box) this.select(+box.dataset.idx);
+      else if(!e.target.closest("#dirpick")) this.clear();
+    });
+  },
+  select(idx){ if(State.locked||State.over)return; this.idx=idx;
+    // gán nút theo trái/phải VẬT LÝ của riêng ô này → "←" luôn rải sang trái
+    const xPlus=COORD[next(idx,1)].x, xMinus=COORD[next(idx,-1)].x;
+    const leftDir = xPlus<xMinus ? 1 : -1;
+    this.pick.querySelector(".dl").dataset.dir = leftDir;
+    this.pick.querySelector(".dr").dataset.dir = -leftDir;
+    const c=COORD[idx];
+    this.pick.style.left=(c.x/1000*100)+"%"; this.pick.style.top=((c.y-c.h/2)/462*100)+"%";
+    this.pick.style.display="flex";
+    this.refreshHl();
+  },
+  hl(idx,main){ const ln=document.getElementById("line-"+idx);
+    if(ln){ ln.style.stroke="var(--hilite)"; ln.style.strokeWidth=(main?9:7); } },
+  clearLines(){ document.querySelectorAll('[id^="line-"]').forEach(ln=>{ ln.style.stroke=""; ln.style.strokeWidth=""; }); },
+  refreshHl(){ this.clearLines(); if(this.idx!=null) this.hl(this.idx,true); },
+  preview(dir){ if(this.idx==null)return; this.clearLines(); this.hl(this.idx,true);
+    let pos=this.idx,n=State.board[this.idx].dan;
+    for(let k=0;k<n;k++){ pos=next(pos,dir); this.hl(pos,false); } },
+  confirm(dir){ if(this.idx==null||State.locked)return; const from=this.idx; this.clear(); Game.performMove(from,dir); },
+  clear(){ this.idx=null; if(this.pick)this.pick.style.display="none"; this.clearLines(); }
+};
+
+/* ===================== Game loop ===================== */
+const Game={
+  async performMove(start,dir){
+    if(State.locked||State.over)return; State.locked=true; State.moveCount++; RenderUI.markSelectable(); Audio_.ensure();
+    const {events,board}=simulateMove(State.board,start,dir);
+    await Anim.play(events);
+    State.board=board; RenderUI.renderAll(State.board); RenderUI.renderScores();
+    // hết game khi CẢ HAI ô quan trống rỗng hoàn toàn (không còn cả quan lẫn dân)
+    if((cellEmpty(State.board[0],0)&&cellEmpty(State.board[6],6))||State.moveCount>500) return this.endGame();
+    State.current=State.current===1?2:1; RenderUI.renderScores();
+    await this.startTurn();
+  },
+  async startTurn(){
+    if(sideEmpty(State.board,State.current)){
+      const pl=State.players[State.current], opp=State.players[State.current===1?2:1];
+      let got=spendBank(pl,5); if(got<5) got+=spendBank(opp,5-got);
+      RenderUI.renderScores(); RenderUI.renderBowl(State.current,false); RenderUI.renderBowl(State.current===1?2:1,false);
+      if(got<=0) return this.endGame();
+      const cells=cellsOf(State.current).slice(0,got);
+      RenderUI.setStatus(`Sân trống — ${this.name(State.current)} rút quỹ rải lại ${got} quân.`);
+      Anim.display=cloneBoard(State.board); await Anim.playRefill(cells);
+      for(const c of cells) State.board[c].dan++; RenderUI.renderAll(State.board);
+    }
+    if(legalMoves(State.board,State.current).length===0) return this.endGame();
+    State.locked=false; RenderUI.markSelectable();
+    if(State.mode==="ai"&&State.current===2){
+      RenderUI.setStatus(`<b>${State.names[2]}</b> đang đi…`);
+      await wait(360); const mv=aiPick();
+      if(mv) await this.performMove(mv.i,mv.dir); else this.endGame();
+    } else {
+      RenderUI.setStatus(`Lượt của <b>${this.name(State.current)}</b> — chọn ô để đi.`);
+    }
+  },
+  name(p){return State.names[p];},
+  endGame(){
+    for(const i of P1_CELLS){State.players[1].dan+=State.board[i].dan;State.board[i].dan=0;}
+    for(const i of P2_CELLS){State.players[2].dan+=State.board[i].dan;State.board[i].dan=0;}
+    State.over=true;State.locked=true;State.started=false;
+    RenderUI.renderAll(State.board);RenderUI.renderScores();RenderUI.renderBowls(true);Selection.clear();Hand.hide();
+    const s1=finalScore(State.players[1]),s2=finalScore(State.players[2]);
+    document.getElementById("win-p1").textContent=s1; document.getElementById("win-p2").textContent=s2;
+    document.getElementById("winlbl-1").textContent=State.names[1]; document.getElementById("winlbl-2").textContent=State.names[2];
+    const banner=document.getElementById("win-banner"),sub=document.getElementById("win-sub");
+    if(s1===s2){banner.textContent="🤝 Hoà!";sub.textContent=`Cả hai cùng ${s1} điểm.`;}
+    else{const w=s1>s2?1:2; banner.textContent=`🏆 ${State.names[w]} thắng!`; sub.textContent=`${s1} – ${s2} điểm`;}
+    RenderUI.setStatus("Ván đấu kết thúc.");UI.show("win");
+  },
+  start(){
+    newGame(); document.getElementById("app").dataset.skin=State.skin;
+    RenderUI.buildBoard(); Hand.init(); Flyer.init(); Selection.init();
+    RenderUI.renderStripChars();
+    RenderUI._bowlShown={1:0,2:0}; RenderUI.renderBowls(false);
+    RenderUI.renderAll(State.board); RenderUI.renderScores(); RenderUI.markSelectable();
+    RenderUI.setStatus(`Lượt của <b>${State.names[1]}</b> — chọn ô để đi.`);
+  }
+};
+
+/* ===================== UI wiring ===================== */
+const UI={
+  show(id){document.getElementById(id).classList.remove("hidden");},
+  hide(id){document.getElementById(id).classList.add("hidden");},
+  seg(id,fn){const seg=document.getElementById(id);seg.querySelectorAll("button").forEach(b=>{
+    b.addEventListener("click",()=>{seg.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed","false"));
+      b.setAttribute("aria-pressed","true");fn(b.dataset.v);});});},
+  openMenu(){ const active=State.started&&!State.over;
+    document.getElementById("btn-resume").style.display=active?"block":"none";
+    document.getElementById("btn-start").textContent=active?"Bỏ ván & chơi mới":"Bắt đầu ván mới";
+    this.show("menu"); },
+  fillChars(containerId,p){
+    const el=document.getElementById(containerId); el.innerHTML="";
+    CHAR_LIST.forEach(type=>{
+      const b=document.createElement("button"); b.className="charbtn"; b.dataset.type=type;
+      b.setAttribute("aria-pressed", State.chars[p]===type?"true":"false");
+      b.innerHTML=charSVG(type);
+      b.addEventListener("click",()=>{ State.chars[p]=type;
+        el.querySelectorAll(".charbtn").forEach(x=>x.setAttribute("aria-pressed","false"));
+        b.setAttribute("aria-pressed","true"); });
+      el.appendChild(b);
+    });
+  },
+  init(){
+    const n1=document.getElementById("name-1"), n2=document.getElementById("name-2");
+    n1.value=State.names[1]; n2.value=State.names[2];
+    n1.addEventListener("input",()=>State.names[1]=n1.value.trim()||"Người 1");
+    n2.addEventListener("input",()=>{State.names[2]=n2.value.trim()||"Người 2"; n2.dataset.touched="1";});
+    this.fillChars("chars-1",1); this.fillChars("chars-2",2);
+    this.seg("seg-mode",v=>{State.mode=v;document.getElementById("field-diff").style.display=v==="ai"?"block":"none";
+      if(!n2.dataset.touched){ const dn=(v==="ai")?"Máy":"Tèo"; n2.value=dn; State.names[2]=dn; }});
+    this.seg("seg-diff",v=>State.diff=v);
+    this.seg("seg-skin",v=>{State.skin=v;document.getElementById("app").dataset.skin=v;if(State.board.length){RenderUI.renderAll(State.board);RenderUI.renderBowls(false);}});
+    this.seg("seg-speed",v=>State.speed=v);
+    document.getElementById("btn-start").addEventListener("click",()=>{this.hide("menu");Game.start();});
+    document.getElementById("btn-resume").addEventListener("click",()=>{this.hide("menu");
+      if(State.started){ RenderUI.renderStripChars(); RenderUI.renderScores(); }});
+    document.getElementById("btn-again").addEventListener("click",()=>{this.hide("win");Game.start();});
+    document.getElementById("btn-tohome").addEventListener("click",()=>{this.hide("win");this.openMenu();});
+    document.getElementById("btn-home").addEventListener("click",()=>this.openMenu());
+    document.getElementById("btn-rules").addEventListener("click",()=>this.show("rules"));
+    document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>this.hide(b.dataset.close)));
+    document.querySelectorAll(".overlay").forEach(o=>o.addEventListener("click",e=>{
+      if(e.target===o && o.id==="rules") this.hide(o.id);
+      if(e.target===o && o.id==="menu" && State.started && !State.over){ this.hide("menu"); RenderUI.renderStripChars(); RenderUI.renderScores(); }
+    }));
+    const sb=document.getElementById("btn-sound");
+    sb.addEventListener("click",()=>{State.sound=!State.sound;sb.textContent=State.sound?"🔊":"🔇";if(State.sound)Audio_.ensure();});
+    // default skin attr
+    document.getElementById("app").dataset.skin=State.skin;
+  }
+};
+document.addEventListener("DOMContentLoaded",()=>UI.init());
+</script>
+</body>
+</html>
