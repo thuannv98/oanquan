@@ -37,8 +37,12 @@ button{font-family:inherit;cursor:pointer}
 /* village backdrop */
 #bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
 
-#app{position:relative;z-index:1;max-width:1060px;margin:0 auto;padding:6px 12px 12px;
-  display:flex;flex-direction:column;gap:8px;min-height:100dvh}
+#app{position:relative;z-index:1;max-width:1060px;margin:0 auto;padding:4px 6px 8px;
+  display:grid;grid-template-columns:1fr auto;grid-template-areas:"title tools" "game game";
+  gap:6px 8px;align-items:center;min-height:100dvh}
+.brand{grid-area:title}
+.topbtns{grid-area:tools;display:flex;gap:8px}
+.gamewrap{grid-area:game;display:flex;flex-direction:column;gap:6px;justify-content:center;min-width:0}
 
 /* ---------- side rails (title left, tools right) ---------- */
 .rail{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:9px}
@@ -63,7 +67,7 @@ button{font-family:inherit;cursor:pointer}
 .icon-btn:active{transform:translateY(1px) scale(.94)}
 
 /* ---------- player strips (người trên / người dưới) ---------- */
-.pstrip{display:flex;align-items:center;gap:clamp(8px,2.4vw,14px);padding:6px 12px;position:relative;
+.pstrip{display:flex;align-items:center;gap:clamp(8px,2.4vw,14px);padding:3px 7px;position:relative;
   border-radius:20px 18px 22px 16px;background:#ffffff55;border:2.5px solid transparent;transition:.25s}
 .pstrip.active{background:#ffffffaa;border-color:var(--clr);box-shadow:2px 3px 0 var(--shadow)}
 .pchar{flex:0 0 auto;width:clamp(46px,11vw,66px)}
@@ -114,12 +118,12 @@ button{font-family:inherit;cursor:pointer}
 .charbtn svg{width:100%;height:100%}
 
 /* ---------- board ---------- */
-.board-wrap{position:relative;border-radius:22px;padding:clamp(4px,1.1vw,9px);
+.board-wrap{position:relative;border-radius:18px;padding:clamp(2px,0.7vw,5px);
   background:
     radial-gradient(120% 130% at 50% 18%, #e6cda0 0%, var(--earth-2) 60%, var(--earth-3) 100%);
   box-shadow:inset 0 3px 10px #fff4, inset 0 -10px 26px #0003, 3px 8px 0 var(--shadow);
   border:3px solid #00000018;}
-.board-inner{position:relative;width:100%;aspect-ratio:1000/462}
+.board-inner{position:relative;width:100%;aspect-ratio:984/418}
 #boardsvg{position:absolute;inset:0;width:100%;height:100%;display:block}
 #layer{position:absolute;inset:0}
 
@@ -206,8 +210,9 @@ button{font-family:inherit;cursor:pointer}
 #stage{ width:100%; }
 /* mobile/cảm ứng nhỏ: bỏ tiêu đề, chỉ còn nút công cụ — nhường chỗ cho bàn cờ */
 @media (pointer:coarse) and (max-width:1024px){
+  #app{ grid-template-columns:1fr auto; grid-template-areas:"game tools"; align-items:stretch; gap:6px; }
   .brand{ display:none; }
-  .topbar{ justify-content:flex-end; }
+  .topbtns{ flex-direction:column; align-self:start; gap:9px; }
 }
 @media (orientation:portrait) and (pointer:coarse){
   html,body{ overflow:hidden; }
@@ -217,7 +222,7 @@ button{font-family:inherit;cursor:pointer}
     transform-origin:left top; transform:rotate(-90deg);
     overflow:auto; -webkit-overflow-scrolling:touch;
   }
-  #app{ min-height:100%; padding:8px 14px 14px; }
+  #app{ min-height:100%; padding:4px 8px 8px; }
   /* nắm tay bay nằm ngoài #stage → xoay nội dung cho khớp bàn cờ */
   #flyer{ transform:translate(-50%,-60%) rotate(-82deg); }
   #flyer.drop{ transform:translate(-50%,-60%) rotate(-64deg); }
@@ -275,14 +280,13 @@ button{font-family:inherit;cursor:pointer}
 </svg>
 
 <div id="app">
-  <div class="topbar">
-    <div class="brand"><h1>Ô ăn quan</h1><span class="sub">trò chơi dân gian</span></div>
-    <div class="topbtns">
-      <button class="icon-btn" id="btn-sound" title="Âm thanh">🔊</button>
-      <button class="icon-btn" id="btn-rules" title="Luật chơi">📖</button>
-      <button class="icon-btn" id="btn-home" title="Về màn hình chính">🏠</button>
-    </div>
+  <div class="brand"><h1>Ô ăn quan</h1><span class="sub">trò chơi dân gian</span></div>
+  <div class="topbtns">
+    <button class="icon-btn" id="btn-sound" title="Âm thanh">🔊</button>
+    <button class="icon-btn" id="btn-rules" title="Luật chơi">📖</button>
+    <button class="icon-btn" id="btn-home" title="Về màn hình chính">🏠</button>
   </div>
+  <div class="gamewrap">
 
   <div class="pstrip" id="strip-top">
     <div class="pchar"></div>
@@ -302,7 +306,7 @@ button{font-family:inherit;cursor:pointer}
 
   <div class="board-wrap">
     <div class="board-inner">
-      <svg id="boardsvg" viewBox="0 0 1000 462" preserveAspectRatio="none">
+      <svg id="boardsvg" viewBox="8 22 984 418" preserveAspectRatio="none">
         <defs>
           <filter id="chalk" x="-4%" y="-4%" width="108%" height="108%">
             <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="9" result="n"/>
@@ -363,6 +367,7 @@ button{font-family:inherit;cursor:pointer}
   </div>
 
   <div class="status" id="status" style="display:none"></div>
+  </div>
 </div>
 
 <!-- ===== MENU ===== -->
@@ -497,6 +502,11 @@ const COORD={ 0:{x:80,y:231,w:150,h:392,quan:1}, 6:{x:920,y:231,w:150,h:392,quan
 [11,10,9,8,7].forEach((idx,c)=>COORD[idx]={x:COL_CX[c],y:CY_TOP,w:130,h:188});
 [1,2,3,4,5].forEach((idx,c)=>COORD[idx]={x:COL_CX[c],y:CY_BOT,w:130,h:188});
 
+/* khung nhìn cắt sát nét vẽ (bỏ lề trống trong bàn cờ) — dùng cho cả SVG lẫn lớp DOM */
+const VB={x:8,y:22,w:984,h:418};
+const px=x=>(x-VB.x)/VB.w*100, py=y=>(y-VB.y)/VB.h*100;
+const pw=w=>w/VB.w*100, ph=h=>h/VB.h*100;
+
 /* ===================== GameState ===================== */
 const FOLK_NAMES=["Tí","Tèo","Bi","Na","Mít","Cún","Tủn","Tép"];
 const State={ board:[],current:1,players:{1:{dan:0,quan:0},2:{dan:0,quan:0}},
@@ -619,13 +629,13 @@ const Hand={ el:null,held:null,
   setHeld(n){ this.held.textContent=n>0?n:""; },
   showAt(idx,st){ const c=COORD[idx];
     this.el.style.transition="none";
-    this.el.style.left=(c.x/1000*100)+"%"; this.el.style.top=(c.y/462*100)+"%"; this.el.style.setProperty("--hr","6deg");
+    this.el.style.left=px(c.x)+"%"; this.el.style.top=py(c.y)+"%"; this.el.style.setProperty("--hr","6deg");
     void this.el.offsetWidth; this.el.style.transition="";
     this.state(st); this.setHeld(0); this.el.classList.add("show"); this.idle=true; },
   hideIdle(){ if(this.idle){ this.el.classList.remove("show"); this.idle=false; } },
   async moveTo(idx,rot=6){ const c=COORD[idx];
     this.el.classList.add("show");
-    this.el.style.left=(c.x/1000*100)+"%"; this.el.style.top=(c.y/462*100)+"%";
+    this.el.style.left=px(c.x)+"%"; this.el.style.top=py(c.y)+"%";
     this.el.style.setProperty("--hr",rot+"deg");
     await wait(Math.max(120,stepMs()*0.75)); },
   hide(){ this.el.classList.remove("show"); this.idle=false; }
@@ -739,8 +749,8 @@ const RenderUI={ cellEls:{},
       const box=document.createElement("div"); box.className="cellbox"+(ownerOf(i)?"":"");
       if(isQuan(i)) box.dataset.quan="1";
       box.dataset.idx=i;
-      box.style.left=(c.x/1000*100)+"%"; box.style.top=(c.y/462*100)+"%";
-      box.style.width=(c.w/1000*100)+"%"; box.style.height=(c.h/462*100)+"%";
+      box.style.left=px(c.x)+"%"; box.style.top=py(c.y)+"%";
+      box.style.width=pw(c.w)+"%"; box.style.height=ph(c.h)+"%";
       box.innerHTML=`<div class="count">0</div><div class="pieces"></div>`;
       box.addEventListener("mouseenter",()=>{ if(!box.classList.contains("selectable")||State.locked||State.over||Selection.idx!=null) return; Hand.showAt(i,"open"); });
       box.addEventListener("mouseleave",()=>{ if(Selection.idx==null) Hand.hideIdle(); });
@@ -872,7 +882,7 @@ const Selection={ idx:null,pick:null,inited:false,
     this.pick.querySelector(".dl").dataset.dir = leftDir;
     this.pick.querySelector(".dr").dataset.dir = -leftDir;
     const c=COORD[idx];
-    this.pick.style.left=(c.x/1000*100)+"%"; this.pick.style.top=((c.y-c.h/2)/462*100)+"%";
+    this.pick.style.left=px(c.x)+"%"; this.pick.style.top=py(c.y-c.h/2)+"%";
     this.pick.style.display="flex";
     this.grab(idx);                   // bấm vào ô → nắm quân thật
     this.refreshHl();
