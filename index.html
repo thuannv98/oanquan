@@ -564,25 +564,40 @@ const Hand={ el:null,held:null,
   state(s){ this.el.querySelectorAll(".hstate").forEach(x=>x.classList.remove("on"));
     this.el.querySelector(".s-"+s).classList.add("on"); },
   setHeld(n){ this.held.textContent=n>0?n:""; },
+  showAt(idx,st){ const c=COORD[idx];
+    this.el.style.transition="none";
+    this.el.style.left=(c.x/1000*100)+"%"; this.el.style.top=(c.y/462*100)+"%"; this.el.style.setProperty("--hr","6deg");
+    void this.el.offsetWidth; this.el.style.transition="";
+    this.state(st); this.setHeld(0); this.el.classList.add("show"); this.idle=true; },
+  hideIdle(){ if(this.idle){ this.el.classList.remove("show"); this.idle=false; } },
   async moveTo(idx,rot=6){ const c=COORD[idx];
     this.el.classList.add("show");
     this.el.style.left=(c.x/1000*100)+"%"; this.el.style.top=(c.y/462*100)+"%";
     this.el.style.setProperty("--hr",rot+"deg");
     await wait(Math.max(120,stepMs()*0.75)); },
-  hide(){ this.el.classList.remove("show"); }
+  hide(){ this.el.classList.remove("show"); this.idle=false; }
 };
 
 const Anim={ display:[],
-  async play(events){
+  async play(events,preGrabbed){
     document.documentElement.style.setProperty("--drop-ms",stepMs()+"ms");
-    this.display=cloneBoard(State.board); RenderUI.renderAll(this.display);
-    let holding=0;
+    this.display=cloneBoard(State.board);
+    if(preGrabbed && events[0]) this.display[events[0].idx].dan=0;   // giữ ô đã bốc trống
+    RenderUI.renderAll(this.display);
+    let holding=0, first=true;
     for(const ev of events){
       if(ev.t==="pickup"){
-        Hand.state("open"); await Hand.moveTo(ev.idx,6);
-        Hand.state("fist"); holding=ev.n; this.display[ev.idx].dan=0;
-        RenderUI.renderCell(ev.idx,this.display); Hand.setHeld(holding);
-        Audio_.click(150); await wait(stepMs()*0.5);
+        if(preGrabbed && first){                       // đã nắm sẵn từ lúc chọn ô → không mở tay bốc lại
+          holding=ev.n; this.display[ev.idx].dan=0;
+          Hand.state("fist"); Hand.setHeld(holding);
+          Audio_.click(150); await wait(stepMs()*0.45);
+        } else {
+          Hand.state("open"); await Hand.moveTo(ev.idx,6);
+          Hand.state("fist"); holding=ev.n; this.display[ev.idx].dan=0;
+          RenderUI.renderCell(ev.idx,this.display); Hand.setHeld(holding);
+          Audio_.click(150); await wait(stepMs()*0.5);
+        }
+        first=false;
       } else if(ev.t==="drop"){
         Hand.state("fist"); await Hand.moveTo(ev.idx,6);
         Hand.state("drop");                              // úp nắm tay xuống
@@ -674,6 +689,8 @@ const RenderUI={ cellEls:{},
       box.style.left=(c.x/1000*100)+"%"; box.style.top=(c.y/462*100)+"%";
       box.style.width=(c.w/1000*100)+"%"; box.style.height=(c.h/462*100)+"%";
       box.innerHTML=`<div class="count">0</div><div class="pieces"></div>`;
+      box.addEventListener("mouseenter",()=>{ if(!box.classList.contains("selectable")||State.locked||State.over||Selection.idx!=null) return; Hand.showAt(i,"open"); });
+      box.addEventListener("mouseleave",()=>{ if(Selection.idx==null) Hand.hideIdle(); });
       layer.insertBefore(box,layer.firstChild);
       this.cellEls[i]=box;
     }
@@ -752,12 +769,47 @@ const Selection={ idx:null,pick:null,inited:false,
       b.addEventListener("mouseenter",()=>this.preview(+b.dataset.dir));
       b.addEventListener("mouseleave",()=>this.refreshHl());
     });
-    document.getElementById("layer").addEventListener("click",e=>{
+    const layer=document.getElementById("layer");
+    layer.addEventListener("click",e=>{
       const box=e.target.closest(".cellbox.selectable");
       if(box) this.select(+box.dataset.idx);
       else if(!e.target.closest("#dirpick")) this.clear();
     });
+    // ---- mobile: vuốt từ ô sang trái/phải để đi ----
+    let sx=0,sy=0,sidx=null,active=false;
+    layer.addEventListener("touchstart",e=>{
+      if(State.locked||State.over){active=false;return;}
+      const box=e.target.closest(".cellbox.selectable");
+      if(!box){active=false;return;}
+      const t=e.touches[0]; sx=t.clientX; sy=t.clientY; sidx=+box.dataset.idx; active=true;
+      if(Selection.idx==null) Hand.showAt(sidx,"open");
+    },{passive:true});
+    layer.addEventListener("touchmove",e=>{
+      if(!active)return; const t=e.touches[0], dx=t.clientX-sx, dy=t.clientY-sy;
+      if(Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy)) e.preventDefault();   // chiếm thao tác vuốt ngang
+    },{passive:false});
+    layer.addEventListener("touchend",e=>{
+      if(!active)return; active=false;
+      const t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy;
+      if(Math.abs(dx)>26&&Math.abs(dx)>Math.abs(dy)){
+        e.preventDefault();                                               // vuốt: đi luôn, chặn click chọn
+        const xPlus=COORD[next(sidx,1)].x, xMinus=COORD[next(sidx,-1)].x;
+        const leftDir = xPlus<xMinus?1:-1;
+        const dir = dx<0 ? leftDir : -leftDir;
+        this.idx=null; this.pick.style.display="none"; this.clearLines();
+        this.grab(sidx); this.grabbedIdx=null;                            // nắm quân thật rồi rải
+        Game.performMove(sidx,dir,true);
+      }
+    },{passive:false});
   },
+  grabbedIdx:null,
+  grab(idx){
+    if(this.grabbedIdx!=null && this.grabbedIdx!==idx) RenderUI.renderCell(this.grabbedIdx,State.board);
+    this.grabbedIdx=idx;
+    Hand.showAt(idx,"fist"); Hand.setHeld(State.board[idx].dan);          // nắm lại + cầm số quân
+    const tmp=cloneBoard(State.board); tmp[idx].dan=0; RenderUI.renderCell(idx,tmp);  // ô được bốc trống
+  },
+  ungrab(){ if(this.grabbedIdx!=null){ RenderUI.renderCell(this.grabbedIdx,State.board); this.grabbedIdx=null; } },
   select(idx){ if(State.locked||State.over)return; this.idx=idx;
     // gán nút theo trái/phải VẬT LÝ của riêng ô này → "←" luôn rải sang trái
     const xPlus=COORD[next(idx,1)].x, xMinus=COORD[next(idx,-1)].x;
@@ -767,6 +819,7 @@ const Selection={ idx:null,pick:null,inited:false,
     const c=COORD[idx];
     this.pick.style.left=(c.x/1000*100)+"%"; this.pick.style.top=((c.y-c.h/2)/462*100)+"%";
     this.pick.style.display="flex";
+    this.grab(idx);                   // bấm vào ô → nắm quân thật
     this.refreshHl();
   },
   hl(idx,main){ const ln=document.getElementById("line-"+idx);
@@ -776,16 +829,19 @@ const Selection={ idx:null,pick:null,inited:false,
   preview(dir){ if(this.idx==null)return; this.clearLines(); this.hl(this.idx,true);
     let pos=this.idx,n=State.board[this.idx].dan;
     for(let k=0;k<n;k++){ pos=next(pos,dir); this.hl(pos,false); } },
-  confirm(dir){ if(this.idx==null||State.locked)return; const from=this.idx; this.clear(); Game.performMove(from,dir); },
-  clear(){ this.idx=null; if(this.pick)this.pick.style.display="none"; this.clearLines(); }
+  confirm(dir){ if(this.idx==null||State.locked)return; const from=this.idx;
+    this.idx=null; this.pick.style.display="none"; this.clearLines();
+    this.grabbedIdx=null;                                  // đang cam kết đi → không hoàn lại ô
+    Game.performMove(from,dir,true); },                     // đã nắm sẵn → chỉ rải
+  clear(){ this.idx=null; if(this.pick)this.pick.style.display="none"; this.clearLines(); this.ungrab(); Hand.hideIdle(); }
 };
 
 /* ===================== Game loop ===================== */
 const Game={
-  async performMove(start,dir){
+  async performMove(start,dir,preGrabbed){
     if(State.locked||State.over)return; State.locked=true; State.moveCount++; RenderUI.markSelectable(); Audio_.ensure();
     const {events,board}=simulateMove(State.board,start,dir);
-    await Anim.play(events);
+    await Anim.play(events,preGrabbed);
     State.board=board; RenderUI.renderAll(State.board); RenderUI.renderScores();
     // hết game khi CẢ HAI ô quan trống rỗng hoàn toàn (không còn cả quan lẫn dân)
     if((cellEmpty(State.board[0],0)&&cellEmpty(State.board[6],6))||State.moveCount>500) return this.endGame();
