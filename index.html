@@ -188,9 +188,26 @@ button{font-family:inherit;cursor:pointer}
 
 @media(max-width:520px){ .brand .sub{display:none} .score .pts{font-size:26px} }
 @media(prefers-reduced-motion:reduce){ #hand{transition:none} .piece.born{animation:none} }
+
+/* ===== auto xoay ngang khi điện thoại đang để dọc ===== */
+#stage{ width:100%; }
+@media (orientation:portrait) and (pointer:coarse){
+  html,body{ overflow:hidden; }
+  #stage{
+    position:fixed; top:100%; left:0;
+    width:100vh; height:100vw;            /* khung ngang = lật kích thước màn dọc */
+    transform-origin:left top; transform:rotate(-90deg);
+    overflow:auto; -webkit-overflow-scrolling:touch;
+  }
+  #app{ min-height:100%; padding:8px 14px 14px; }
+  /* nắm tay bay nằm ngoài #stage → xoay nội dung cho khớp bàn cờ */
+  #flyer{ transform:translate(-50%,-60%) rotate(-82deg); }
+  #flyer.drop{ transform:translate(-50%,-60%) rotate(-64deg); }
+}
 </style>
 </head>
 <body>
+<div id="stage">
 
 <!-- ===================== VILLAGE BACKDROP ===================== -->
 <svg id="bg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
@@ -331,22 +348,6 @@ button{font-family:inherit;cursor:pointer}
   <div class="footer-note">Chọn ô → chọn hướng rải. Quan = 5 điểm khi tính chung cuộc.</div>
 </div>
 
-<div id="flyer">
-  <span class="flyer-loot"></span>
-  <svg class="f-fist" viewBox="0 0 120 130" aria-hidden="true">
-    <g fill="var(--skinflesh)" stroke="var(--ink)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
-      <path d="M34,52 Q30,38 44,36 Q60,34 78,40 Q92,46 90,66 Q90,96 64,104 Q38,104 32,80 Q30,64 34,52Z"/>
-      <path d="M44,44 q6,-8 12,0 M58,42 q6,-8 12,0 M72,46 q6,-7 11,1" stroke-width="4" fill="none"/>
-      <path d="M30,60 Q22,58 22,70 Q28,78 36,74"/>
-    </g>
-  </svg>
-  <svg class="f-open" viewBox="0 0 120 130" aria-hidden="true">
-    <g fill="var(--skinflesh)" stroke="var(--ink)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
-      <path d="M30,110 L26,72 Q24,64 16,64 Q10,63 12,55 Q14,48 22,51 Q27,53 29,61 L31,46 L31,28 Q31,22 39,22 Q47,22 47,28 L47,46 L48,46 L48,24 Q48,18 53,18 Q59,18 59,24 L59,46 L61,47 L61,28 Q61,22 67,22 Q73,22 73,28 L73,47 L75,50 L75,34 Q75,29 79,29 Q84,29 84,34 L84,50 L86,72 Q88,96 70,110 Z"/>
-    </g>
-  </svg>
-</div>
-
 <!-- ===== MENU ===== -->
 <div class="overlay" id="menu">
   <div class="panel">
@@ -421,6 +422,23 @@ button{font-family:inherit;cursor:pointer}
     </div>
   </div>
 </div>
+</div><!-- /#stage -->
+
+<div id="flyer">
+  <span class="flyer-loot"></span>
+  <svg class="f-fist" viewBox="0 0 120 130" aria-hidden="true">
+    <g fill="var(--skinflesh)" stroke="var(--ink)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M34,52 Q30,38 44,36 Q60,34 78,40 Q92,46 90,66 Q90,96 64,104 Q38,104 32,80 Q30,64 34,52Z"/>
+      <path d="M44,44 q6,-8 12,0 M58,42 q6,-8 12,0 M72,46 q6,-7 11,1" stroke-width="4" fill="none"/>
+      <path d="M30,60 Q22,58 22,70 Q28,78 36,74"/>
+    </g>
+  </svg>
+  <svg class="f-open" viewBox="0 0 120 130" aria-hidden="true">
+    <g fill="var(--skinflesh)" stroke="var(--ink)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M30,110 L26,72 Q24,64 16,64 Q10,63 12,55 Q14,48 22,51 Q27,53 29,61 L31,46 L31,28 Q31,22 39,22 Q47,22 47,28 L47,46 L48,46 L48,24 Q48,18 53,18 Q59,18 59,24 L59,46 L61,47 L61,28 Q61,22 67,22 Q73,22 73,28 L73,47 L75,50 L75,34 Q75,29 79,29 Q84,29 84,34 L84,50 L86,72 Q88,96 70,110 Z"/>
+    </g>
+  </svg>
+</div>
 
 <script>
 "use strict";
@@ -437,6 +455,13 @@ const isQuan=i=>i===0||i===6;
 const ownerOf=i=>P1_CELLS.includes(i)?1:P2_CELLS.includes(i)?2:0;
 const cellsOf=p=>p===1?P1_CELLS:P2_CELLS;
 const next=(i,d)=>(i+d+12)%12;
+
+/* true khi đang tự xoay ngang (điện thoại để dọc) */
+let ROT=false;
+function updateRot(){ ROT = window.matchMedia("(orientation:portrait) and (pointer:coarse)").matches; }
+updateRot();
+window.addEventListener("resize",updateRot);
+window.addEventListener("orientationchange",()=>setTimeout(updateRot,60));
 
 /* viewBox coordinates (0..1000 x 0..462) */
 const COL_CX=[230,364,498,632,766], CY_TOP=128, CY_BOT=331;
@@ -786,16 +811,18 @@ const Selection={ idx:null,pick:null,inited:false,
     },{passive:true});
     layer.addEventListener("touchmove",e=>{
       if(!active)return; const t=e.touches[0], dx=t.clientX-sx, dy=t.clientY-sy;
-      if(Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy)) e.preventDefault();   // chiếm thao tác vuốt ngang
+      const bd = ROT ? -dy : dx, cross = ROT ? dx : dy;   // bd = trục ngang của bàn cờ
+      if(Math.abs(bd)>10&&Math.abs(bd)>Math.abs(cross)) e.preventDefault();   // chiếm thao tác vuốt
     },{passive:false});
     layer.addEventListener("touchend",e=>{
       if(!active)return; active=false;
       const t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy;
-      if(Math.abs(dx)>26&&Math.abs(dx)>Math.abs(dy)){
+      const bd = ROT ? -dy : dx, cross = ROT ? dx : dy;
+      if(Math.abs(bd)>26&&Math.abs(bd)>Math.abs(cross)){
         e.preventDefault();                                               // vuốt: đi luôn, chặn click chọn
         const xPlus=COORD[next(sidx,1)].x, xMinus=COORD[next(sidx,-1)].x;
         const leftDir = xPlus<xMinus?1:-1;
-        const dir = dx<0 ? leftDir : -leftDir;
+        const dir = bd<0 ? leftDir : -leftDir;                            // vuốt về trái bàn cờ → leftDir
         this.idx=null; this.pick.style.display="none"; this.clearLines();
         this.grab(sidx); this.grabbedIdx=null;                            // nắm quân thật rồi rải
         Game.performMove(sidx,dir,true);
