@@ -458,10 +458,21 @@ const next=(i,d)=>(i+d+12)%12;
 
 /* true khi đang tự xoay ngang (điện thoại để dọc) */
 let ROT=false;
-function updateRot(){ ROT = window.matchMedia("(orientation:portrait) and (pointer:coarse)").matches; }
+function updateRot(){ ROT = window.matchMedia("(orientation:portrait) and (pointer:coarse)").matches; fitStage(); }
+function fitStage(){
+  const app=document.getElementById("app"); if(!app) return;
+  app.style.transform="none"; app.style.marginBottom="0";        // đo chiều cao thật
+  const appH=app.scrollHeight;
+  const avail = ROT ? window.innerWidth : window.innerHeight;     // chiều cao khả dụng (đã tính xoay)
+  let s=Math.min(1,(avail-4)/appH);
+  if(!isFinite(s)||s<=0||appH===0) s=1;
+  app.style.transformOrigin="top center";
+  if(s<1){ app.style.transform=`scale(${s})`; app.style.marginBottom=(appH*(s-1))+"px"; } // co lại + thu khoảng trống
+  else { app.style.transform="none"; app.style.marginBottom="0"; }
+}
 updateRot();
 window.addEventListener("resize",updateRot);
-window.addEventListener("orientationchange",()=>setTimeout(updateRot,60));
+window.addEventListener("orientationchange",()=>setTimeout(updateRot,80));
 
 /* viewBox coordinates (0..1000 x 0..462) */
 const COL_CX=[230,364,498,632,766], CY_TOP=128, CY_BOT=331;
@@ -917,6 +928,7 @@ const Game={
     RenderUI._bowlShown={1:0,2:0}; RenderUI.renderBowls(false);
     RenderUI.renderAll(State.board); RenderUI.renderScores(); RenderUI.markSelectable();
     RenderUI.setStatus(`Lượt của <b>${State.names[1]}</b> — chọn ô để đi.`);
+    requestAnimationFrame(()=>fitStage());
   }
 };
 
@@ -956,7 +968,7 @@ const UI={
     this.seg("seg-speed",v=>State.speed=v);
     document.getElementById("btn-start").addEventListener("click",()=>{this.hide("menu");Game.start();});
     document.getElementById("btn-resume").addEventListener("click",()=>{this.hide("menu");
-      if(State.started){ RenderUI.renderStripChars(); RenderUI.renderScores(); }});
+      if(State.started){ RenderUI.renderStripChars(); RenderUI.renderScores(); } fitStage();});
     document.getElementById("btn-again").addEventListener("click",()=>{this.hide("win");Game.start();});
     document.getElementById("btn-tohome").addEventListener("click",()=>{this.hide("win");this.openMenu();});
     document.getElementById("btn-home").addEventListener("click",()=>this.openMenu());
